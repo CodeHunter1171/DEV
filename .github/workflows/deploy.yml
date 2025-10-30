@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - Dev Website
+name: CI/CD Pipeline - Govt Prep Dev App
 
 on:
   push:
@@ -22,17 +22,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Debug Current Directory
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Files:"
-          ls -a
-
       - name: Build and Push Docker Image
         run: |
-          docker build -t madhesh1171/dev:latest .
-          docker push madhesh1171/dev:latest
+          docker build -t madhesh1171/dev-web-app:latest .
+          docker push madhesh1171/dev-web-app:latest
+
+      - name: Start Minikube
+        uses: medyagh/setup-minikube@master
+        with:
+          driver: docker
+
+      - name: Verify Cluster
+        run: kubectl get pods -A
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -44,5 +45,5 @@ jobs:
       - name: Apply Terraform
         working-directory: ./iac
         env:
-          TF_VAR_docker_image: madhesh1171/dev:latest
+          TF_VAR_docker_image: madhesh1171/dev-web-app:latest
         run: terraform apply -auto-approve -lock=false
