@@ -1,39 +1,43 @@
-steps:
-  # Step 1: Checkout repository
-  - name: Checkout Repository
-    uses: actions/checkout@v4
+name: CI/CD Pipeline - Dev Project
 
-  # Step 2: Set up Docker
-  - name: Set up Docker
-    uses: docker/setup-buildx-action@v3
+on:
+  push:
+    branches:
+      - main
 
-  # Step 3: Login to Docker Hub
-  - name: Login to Docker Hub
-    uses: docker/login-action@v3
-    with:
-      username: ${{ secrets.DOCKERHUB_USERNAME }}
-      password: ${{ secrets.DOCKERHUB_TOKEN }}
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-  # Step 4: Build and Push Docker Image
-  - name: Build and Push Docker Image
-    run: |
-      docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/dev:latest .
-      docker push ${{ secrets.DOCKERHUB_USERNAME }}/dev:latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-  # Step 5: Setup Terraform
-  - name: Setup Terraform
-    uses: hashicorp/setup-terraform@v3
-    with:
-      terraform_version: 1.9.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-  # Step 6: Initialize Terraform
-  - name: Initialize Terraform
-    working-directory: ./iac
-    run: terraform init
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  # Step 7: Apply Terraform (Deploy to Minikube/Kubernetes)
-  - name: Apply Terraform
-    working-directory: ./iac
-    env:
-      TF_VAR_docker_image: ${{ secrets.DOCKERHUB_USERNAME }}/dev:latest
-    run: terraform apply -auto-approve -lock=false
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/dev:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/dev:latest
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+
+      - name: Initialize Terraform
+        working-directory: ./iac
+        run: terraform init
+
+      - name: Apply Terraform
+        working-directory: ./iac
+        env:
+          TF_VAR_docker_image: ${{ secrets.DOCKERHUB_USERNAME }}/dev:latest
+        run: terraform apply -auto-approve -lock=false
