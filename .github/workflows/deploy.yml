@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - Govt Prep Web App
+name: CI/CD Pipeline - Dev Website
 
 on:
   push:
@@ -22,13 +22,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push Docker Image
+      - name: Debug Current Directory
         run: |
           echo "Current directory:"
           pwd
-          echo "Listing files:"
-          ls -la
-          docker buildx build --platform linux/amd64 -t silvesteranto/govt-prep-web-app:latest . --push
+          echo "Files:"
+          ls -a
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t madhesh1171/dev:latest .
+          docker push madhesh1171/dev:latest
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -40,5 +44,5 @@ jobs:
       - name: Apply Terraform
         working-directory: ./iac
         env:
-          KUBE_CONFIG_PATH: ${{ secrets.KUBE_CONFIG }}
+          TF_VAR_docker_image: madhesh1171/dev:latest
         run: terraform apply -auto-approve -lock=false
