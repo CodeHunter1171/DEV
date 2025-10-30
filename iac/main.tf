@@ -9,9 +9,11 @@ terraform {
 }
 
 provider "kubernetes" {
-  config_path = "~/.kube/config"
+  # Uses KUBE_CONFIG passed from GitHub Secrets in workflow
+  config_path = pathexpand("~/.kube/config")
 }
 
+# Kubernetes Deployment
 resource "kubernetes_deployment" "dev_deploy" {
   metadata {
     name = "dev-deploy"
@@ -27,17 +29,20 @@ resource "kubernetes_deployment" "dev_deploy" {
         app = "dev"
       }
     }
+
     template {
       metadata {
         labels = {
           app = "dev"
         }
       }
+
       spec {
         container {
           name  = "dev-container"
-          image = "dev:latest"
-          image_pull_policy = "IfNotPresent"
+          image = var.docker_image        # dynamically passed from GitHub Actions
+          image_pull_policy = "Always"
+
           port {
             container_port = 80
           }
@@ -47,19 +52,29 @@ resource "kubernetes_deployment" "dev_deploy" {
   }
 }
 
+# Kubernetes Service
 resource "kubernetes_service" "dev_service" {
   metadata {
     name = "dev-service"
   }
+
   spec {
     type = "NodePort"
+
     selector = {
       app = "dev"
     }
+
     port {
       port        = 80
       target_port = 80
       node_port   = 30007
     }
   }
+}
+
+# Variable for Docker image name
+variable "docker_image" {
+  description = "Docker image to deploy"
+  type        = string
 }
